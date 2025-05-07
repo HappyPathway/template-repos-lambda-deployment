@@ -1,11 +1,23 @@
-variable "aws_region" {
-  type        = string
-  description = "AWS Region"
-  default     = "us-east-1"
+variable image_tags {
+  description = "List of image tags to be used for the Lambda function"
+  type        = list(string)
+  default     = ["0.23.0"]
 }
 
-variable "tags" {
-  type        = map(string)
-  description = "Additional tags (e.g. map(`BusinessUnit`,`XYZ`))"
-  default     = {}
+variable image_tag {
+  description = "Tag for the ECR image"
+  type        = string
+  default     = "0.23.0"
+}
+
+variable image_name {
+  description = "Name of the ECR image"
+  type        = string
+  default     = "template-automation-lambda"
+}
+
+variable project_name {
+  description = "Project name for the ECR image"
+  type        = string
+  default     = "eks-automation-lambda"
 }
