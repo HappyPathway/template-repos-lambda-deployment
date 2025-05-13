@@ -15,7 +15,7 @@ module "template_automation" {
 
   # GitHub token configuration (using AWS Secrets Manager)
   github_token = {
-    secret_name = "github/template-automation-token"
+    secret_name = "/eks-cluster-deployment/github_token"
   }
 
   # Lambda function configuration
@@ -27,7 +27,19 @@ module "template_automation" {
     memory_size = 512
     timeout     = 300
     environment_variables = {
-      LOG_LEVEL = "INFO"
+      LOG_LEVEL          = "INFO"
+      GITHUB_API         = "https://github.e.it.census.gov" # "https://${data.dns_a_record_set.github.addrs[0]}"
+      GITHUB_ORG_NAME    = "SCT-Engineering"
+      TEMPLATE_REPO_NAME = "template-eks-cluster"
+      PYTHONWARNINGS     = "ignore:Unverified HTTPS request"
+      REQUESTS_CA_BUNDLE = "/tmp"  # Using an invalid path forces requests to skip verification
+      SSL_CERT_FILE      = "/tmp"  # Force Python's ssl module to skip verification
+      GIT_SSL_NO_VERIFY  = "true"  # Also helps with some GitHub clients
+      VERIFY_SSL         = "false" # Explicitly disable SSL verification for our custom logic
+    }
+    vpc_config = {
+      subnet_ids         = ["subnet-0b1992a84536c581b"]
+      security_group_ids = ["sg-0641c697588b9aa6b"]
     }
   }
 
