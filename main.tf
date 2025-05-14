@@ -16,6 +16,7 @@ module "template_automation" {
   # GitHub token configuration (using AWS Secrets Manager)
   github_token = {
     secret_name = "/eks-cluster-deployment/github_token"
+    kms_key_id  = aws_kms_key.lambda_secrets_key.arn # Reference to the KMS key for secrets
   }
 
   # Lambda function configuration
@@ -46,7 +47,7 @@ module "template_automation" {
   # SSM Parameter configuration
   parameter_store_prefix = "/template-automation"
   ssm_parameters = {
-    "github_org"     = "sct-engineering"
+    "github_org"     = "SCT-Engineering"
     "template_repo"  = "template-eks-cluster"
     "config_file"    = "config.json"
     "default_branch" = "main"
@@ -62,5 +63,71 @@ module "template_automation" {
 
   depends_on = [
     module.ecr-clone,
+    aws_kms_key.lambda_secrets_key,
   ]
+}
+
+# Create a KMS key for Lambda secrets
+resource "aws_kms_key" "lambda_secrets_key" {
+  description             = "KMS key for Lambda secrets encryption"
+  deletion_window_in_days = 10
+  enable_key_rotation     = true
+
+  tags = {
+    Name        = "template-repos-lambda-secrets-key"
+    Environment = "production"
+    Project     = "template-automation"
+    ManagedBy   = "terraform"
+  }
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid    = "Enable IAM User Permissions"
+        Effect = "Allow"
+        Principal = {
+          AWS = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"
+        }
+        Action   = "kms:*"
+        Resource = "*"
+      },
+      {
+        Sid    = "Allow Lambda to use the key"
+        Effect = "Allow"
+        Principal = {
+          Service = "lambda.amazonaws.com"
+        }
+        Action = [
+          "kms:Decrypt",
+          "kms:DescribeKey",
+        ]
+        Resource = "*"
+      }
+    ]
+  })
+}
+
+# Create a KMS alias for easier reference
+resource "aws_kms_alias" "lambda_secrets_alias" {
+  name          = "alias/template-repos-lambda-secrets"
+  target_key_id = aws_kms_key.lambda_secrets_key.key_id
+}
+
+resource "aws_iam_role_policy" "lambda_kms_policy" {
+  name = "template-repos-lambda-kms-policy"
+  role = module.template_automation.lambda_role_id
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "kms:Decrypt",
+          "kms:DescribeKey"
+        ]
+        Resource = "*" // You can restrict this to specific KMS keys if needed
+      }
+    ]
+  })
 }
