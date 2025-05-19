@@ -1,5 +1,5 @@
 module "template_automation" {
-  source = "../terraform-aws-template-automation"
+  source = "HappyPathway/template-automation/aws"
 
   name_prefix     = "template-repos"
   github_org_name = "sct-engineering" # Your GitHub org name
